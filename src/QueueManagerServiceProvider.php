@@ -20,9 +20,16 @@ class QueueManagerServiceProvider extends ServiceProvider {
    */
   public function register()
   {
+      $this->app->singleton('queuemanager', function ($app) {
+          $config = $app->make('config')->get('queuemanager');
+          return new QueueManager($config);
+      });
+      $this->app->alias('queuemanager', 'floreean\XmlQmLaravel\QueueManager');
 
-    // See src/Facades/QueueManagerLaravelFacade.php
-    App::bind( 'floreean.queuemanager.laravel.facade', function () {
+      /*
+      // See src/Facades/QueueManagerLaravelFacade.php
+      App::bind( 'floreean.queuemanager.laravel.facade', function () {
+        echo "there";
 
       // Feel free to comment this section if you no need of configuration
       $config = config( 'queuemanager' );
@@ -34,6 +41,18 @@ class QueueManagerServiceProvider extends ServiceProvider {
       // DO NOT REMOVE or COMMENT - here we'll create the Facade
       // Remove $config if you have comment the lines above
       return new \floreean\XmlQmLaravel\QueueManager( $config );
+
     } );
+      */
   }
+
+    /**
+     * Get the services provided by the provider.
+     *
+     * @return array
+     */
+    public function provides()
+    {
+        return ['queuemanager', 'floreean\XmlQmLaravel\QueueManager'];
+    }
 }

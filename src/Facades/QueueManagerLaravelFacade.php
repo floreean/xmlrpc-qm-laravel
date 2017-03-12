@@ -14,7 +14,8 @@ class QueueManagerLaravelFacade extends Facade {
    */
   protected static function getFacadeAccessor()
   {
-    return 'floreean.queuemanager.laravel.facade';
+
+      return 'floreean.queuemanager.laravel.facade';
   }
 
 }
