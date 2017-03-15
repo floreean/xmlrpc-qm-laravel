@@ -4,9 +4,12 @@ namespace floreean\XmlQmLaravel;
 
 use \fXmlRpc\Client;
 use \fXmlRpc\Parser\NativeParser;
+use fXmlRpc\Parser\XmlReaderParser;
 use \fXmlRpc\Serializer\NativeSerializer;
 use fXmlRpc\Transport\Recorder;
+use fXmlRpc\Value\Base64;
 use Http\Message\MessageFactory;
+use League\Flysystem\Exception;
 
 /**
  * QueueManager class.
@@ -63,7 +66,9 @@ class QueueManager
             $this->_recorder = new \fXmlRpc\Transport\Recorder($transport);
             $this->_client = new \fXmlRpc\Client(
                 'http://'.$config['xmlrpcUrl'].':'.$config['xmlrpcPort'],
-                $this->_recorder
+                $this->_recorder,
+                new \fXmlRpc\Parser\XmlReaderParser(),
+                new \fXmlRpc\Serializer\XmlWriterSerializer()
             );
         }
 
@@ -98,7 +103,6 @@ class QueueManager
         // no error - save token to session and return it as well
         $this->_token = $this->_parser->parse($this->_recorder->getLastResponse());
         $this->_storeToken($this->_token);
-        echo "got token: ".$this->_token;
         return $this->_token;
     }
 
@@ -122,46 +126,36 @@ class QueueManager
             return $e;
         }
 
-        $xml = simplexml_load_string($response);
+        $toArrayParser = new \Nathanmac\Utilities\Parser\Parser();
+        $response = $toArrayParser->xml($response);
 
-        if($xml){
-            $status = $xml->CommunicationResponse->Result;
-            if((int) $status['Status'] < 10){
-                // Succesfull
-                $resultlist = $xml->ResponseData;
+        if($response){
+            $status = (int) $response['CommunicationResponse']['Result'];
+            if($status < 10){
+                //Succesfull
+                return $response['ResponseData'];
             } else {
-                // Error
-                throw new QueueManagerException('XML_'.$erTitle, (int) $status['status']);
+                throw new QueueManagerException('XML_Response_Error', $status);
             }
         } else {
-            $err = libxml_get_last_error();
-            throw new QueueManagerException('XML_'.$erTitle, $err);
+            throw new QueueManagerException('XML_Parse_Error');
         }
-
-        return $resultlist;
     }
 
     private function _doRequest($method, $params){
-        echo "called _doRequest";
         if(!$this->_token){
             $this->_token = $this->getToken();
         }
 
         $request = [
-            [
-                ['Token' => $this->_token],
-                'struct'
-            ],
-            [$params, 'base64'],
+            ['Token' => $this->_token],
+            Base64::serialize($params)
         ];
-
-        dd($request);
 
         try {
             $this->_client->call($method, $request);
         } catch (\Exception $e) {
             $errCode = $e->getFaultCode();
-            dd($this->_recorder->getLastResponse());
             if (in_array($errCode, [712, 711])) {
                 return $this->_doRequest($method, $params);
             } elseif (in_array($errCode, [710, 701])){
@@ -174,7 +168,6 @@ class QueueManager
         }
 
         $ticket = $this->_parser->parse($this->_recorder->getLastResponse());
-        dd($ticket);
         return $ticket;
     }
 
@@ -187,14 +180,9 @@ class QueueManager
             $this->_timeout = $timeout;
         }
 
-        // TODO: possible to simplify?
         $request = [
-            [
-                ['Token' => $this->_token], 'struct'
-            ],
-            [
-                ['Ticket', $ticket],  'struct'
-            ]
+            ['Token' => $this->_token],
+            ['Ticket' => $ticket]
         ];
 
         $i = 1;
@@ -214,7 +202,9 @@ class QueueManager
                 }
                 $i++;
             }
-            return $response = $this->_parser->parse($this->_recorder->getLastResponse());
+
+            return $this->_parser->parse($this->_recorder->getLastResponse())->getDecoded();
+
         }
         throw new Exception("Timeout Exception",450);
     }
