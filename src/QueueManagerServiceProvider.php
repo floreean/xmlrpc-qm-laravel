@@ -22,7 +22,7 @@ class QueueManagerServiceProvider extends ServiceProvider {
   {
       $this->app->singleton('queuemanager', function ($app) {
           $config = $app->make('config')->get('queuemanager');
-          return new QueueManager($config);
+          return new QueueManager($config, $app['session.store']);
       });
       $this->app->alias('queuemanager', 'floreean\XmlQmLaravel\QueueManager');
 

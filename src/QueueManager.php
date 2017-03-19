@@ -2,14 +2,16 @@
 
 namespace floreean\XmlQmLaravel;
 
-use \fXmlRpc\Client;
-use \fXmlRpc\Parser\NativeParser;
+use fXmlRpc\Client;
+use fXmlRpc\Parser\NativeParser;
 use fXmlRpc\Parser\XmlReaderParser;
-use \fXmlRpc\Serializer\NativeSerializer;
+use fXmlRpc\Serializer\NativeSerializer;
 use fXmlRpc\Transport\Recorder;
 use fXmlRpc\Value\Base64;
 use Http\Message\MessageFactory;
+use Illuminate\Session\Store;
 use League\Flysystem\Exception;
+use Illuminate\Contracts\Session\Session;
 
 /**
  * QueueManager class.
@@ -46,7 +48,10 @@ class QueueManager
     /** Request timeout */
     protected $_interval = 1;
 
-    public function __construct($config = [])
+    /** Session Object */
+    protected $_session = null;
+
+    public function __construct($config = [], Session $session = null)
     {
         // You may comment this line if you application doesn't support the config
         if (empty($config)) {
@@ -74,6 +79,7 @@ class QueueManager
 
         $this->_timeout = isset($config['xmlrpcTimeout']) ? $config['xmlrpcTimeout'] : $this->_timeout;
         $this->_interval = isset($config['xmlrpcInterval']) ? $config['xmlrpcInterval'] : $this->_interval;
+        $this->_session = $session;
     }
 
     public function getToken(){
@@ -233,10 +239,16 @@ class QueueManager
      * @return bool
      */
     private function _storeToken($token){
-        return true;
+        $this->_session->put('xmlrpc_token', $token);
     }
 
+    /**
+     * @return bool
+     */
     private function _getSessionToken(){
+        if($this->_session->get('xmlrpc_token') != ''){
+            return $this->_session->get('xmlrpc_token');
+        }
         return false;
     }
 }
