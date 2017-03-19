@@ -82,10 +82,10 @@ class QueueManager
         $this->_session = $session;
     }
 
-    public function getToken(){
+    public function getToken($force = false){
 
         // first check if there is already a token in the session
-        if($sessionToken = $this->_getSessionToken()){
+        if($force != true && $sessionToken = $this->_getSessionToken()){
             return $sessionToken;
         }
 
@@ -163,6 +163,7 @@ class QueueManager
         } catch (\Exception $e) {
             $errCode = $e->getFaultCode();
             if (in_array($errCode, [712, 711])) {
+                $this->getToken(true);
                 return $this->_doRequest($method, $params);
             } elseif (in_array($errCode, [710, 701])){
                 usleep(500000);
