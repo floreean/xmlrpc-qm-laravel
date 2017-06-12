@@ -1,3 +1,0 @@
-# QueueManager-Laravel-Facade
-
-QueueManager 
