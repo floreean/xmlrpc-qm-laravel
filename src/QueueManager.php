@@ -51,12 +51,19 @@ class QueueManager
     /** Session Object */
     protected $_session = null;
 
+    /** Config Object */
+    protected $_config = null;
+
+
+
     public function __construct($config = [], Session $session = null)
     {
         // You may comment this line if you application doesn't support the config
         if (empty($config)) {
             throw new \RunTimeException('QueueManager Facade configuration is empty. Please run `php artisan vendor:publish`');
         }
+
+        $this->_config = $config;
 
         $this->_parser = new \fXmlRpc\Parser\XmlReaderParser();
 
@@ -97,7 +104,7 @@ class QueueManager
 
         try {
             // call method to get the token
-            $this->_client->call('GetToken', ['PORTFOLIOOFFICE', '82port041off']);
+            $this->_client->call('GetToken', [$this->_config['xmlrpcAuthName'], $this->_config['xmlrpcPassword']]);
         } catch(\Exception $e){
 
             // get the error code of exception
